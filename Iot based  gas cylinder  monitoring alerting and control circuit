@@ -1,0 +1,147 @@
+
+#include "HX711.h"
+#define calibration_factor -7050.0
+int gas = A0;
+int relay = 4;
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN= 3;
+HX711 scale;
+float reading;
+int p1;
+int g=0;
+void setup() 
+{
+  pinMode(gas, INPUT);
+  pinMode(relay, OUTPUT);
+  Serial.begin(9600);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  scale.set_scale(calibration_factor);
+  scale.tare();
+  digitalWrite(relay, HIGH);
+}
+void loop() 
+{
+  reading = scale.get_units();
+//  Serial.print("HX711 reading: ");
+//  Serial.println(reading);
+  if(reading >= -0.1)
+  {
+//    Serial.print("Gas Level: ");
+//    Serial.println("0%");
+    p1 = 0;
+  }
+  else if(reading >= -0.5 && reading < -0.1)
+  {
+//    Serial.print("Gas Level: ");
+//    Serial.println("20%");
+    p1 = 20;
+  }
+  else if(reading >= -1.0 && reading < -0.5)
+  {
+//    Serial.print("Gas Level: ");
+//    Serial.println("50%");
+    p1 = 50;
+  }
+  else if(reading >= -1.5 && reading < -1.0)
+  {
+//    Serial.print("Gas Level: ");
+//    Serial.println("80%");
+    p1 = 80;
+  }
+  else if(reading >= -2.0 && reading < -1.5)
+  {
+//    Serial.print("Gas Level: ");
+//    Serial.println("100%");
+    p1 = 100;
+  }
+  int gas_v = analogRead(gas);
+//  Serial.print("Gas Leak: ");
+//  Serial.println(gas_v);
+  if (gas_v > 300)
+  {
+//    Serial.println("Gas Leaked");
+    g = 1;
+    digitalWrite(relay, LOW);
+    digitalWrite(13,HIGH);
+  }
+  else
+  {
+//    Serial.println("Gas Good");
+    g = 0;
+    digitalWrite(relay, HIGH);
+    digitalWrite(13,LOW);
+  }
+    delay(1000);
+}
+
+6.2 Node MCU Code:
+
+#define BLYNK_TEMPLATE_ID "TMPL3VWrXFn3i"
+#define BLYNK_DEVICE_NAME "Gas Leak"
+#define BLYNK_TEMPLATE_NAME "Gas Leak"
+#define BLYNK_AUTH_TOKEN "UKLdqiZ4yobiCgqFxCQZipam1MJOrRO4"
+#define BLYNK_PRINT Serial
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+BlynkTimer timer;
+#define APP_DEBUG
+int p1,gas;
+int n1=0,n2=0;
+char ssid[] = "No Internet";
+char pass[] = "nonononon";
+WidgetLED led(V1);
+void setup() 
+{
+  Serial.begin(9600);
+  Blynk.begin(BLYNK_AUTH_TOKEN,ssid,pass);
+  while (!Serial) continue;
+}
+void loop() 
+{
+  if (Serial.available()) 
+  {
+    DeserializationError err = deserializeJson(doc, Serial);
+    if (err == DeserializationError::Ok) 
+    {
+      Serial.print("p1 = ");
+      p1 = doc["count1"].as<int>();
+      Serial.println(p1);
+      Serial.print("gas = ");
+      gas = doc["count2"].as<int>();
+      Serial.println(gas);
+    } 
+    else 
+    {
+      Serial.print("deserializeJson() returned ");
+      Serial.println(err.c_str());
+      while (Serial.available() > 0)
+        Serial.read();
+    }
+  }
+  Blynk.virtualWrite(V0, p1);
+  if(p1 == 0 && n1 < 3)
+  {
+    Blynk.notify("Alert: Gas empty");
+    n1++;
+  }
+  if(p1 == 20 && n2 < 3)
+  {
+    Blynk.notify("Alert: Gas level is less, cylinder booked");
+    n2++;
+  }
+  if(gas == 0)
+  {
+    Blynk.setProperty(V1, "color", "#00ff00");
+    led.on();
+  }
+  else
+  {
+    Blynk.setProperty(V1, "color", "#D3435C");
+    led.on();
+    Blynk.notify("Emergecy: Gas Leak Detected!!!");
+  }
+  Blynk.run();
+  timer.run();
+  delay(1000);
+}
+
