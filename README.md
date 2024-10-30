@@ -1,4 +1,4 @@
-# IOT-Projects
+# IOT-Project
 This is our final year project. 
 This project aims to develop an IoT-based gas cylinder monitoring, alerting, and control circuit that leverages the capabilities of modern microcontrollers, gas sensors, and internet connectivity. By employing IoT technology, this system provides real-time monitoring of gas levels within cylinders, enabling timely detection of leaks or abnormal conditions. Moreover, it incorporates alerting mechanisms to notify designated personnel or authorities when gas levels exceed predefined thresholds, thereby facilitating prompt actions to mitigate risks.
 **SYSTEM REQUIREMENTS**
